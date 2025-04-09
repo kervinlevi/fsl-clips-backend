@@ -82,5 +82,32 @@ module.exports = {
         } catch (error) {
             return res.serverError(error);
         }
-      },
+    },
+
+    // Get all users
+    findAll: async function (req, res) {
+        try {
+            const token = req.headers['authorization']?.split(' ')[1];
+            if (!token) {
+                return res.badRequest({ error: 'Token not found' });
+                // return res.status(401).json({ error: 'Unauthorized' });
+            }
+
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await User.findOne({ user_id: decoded.id });
+            if (!user) {
+                return res.badRequest({ error: 'User not found' });
+            }
+            if (user.type != 'admin') {
+                return res.badRequest({ error: 'User is not an admin' });
+            }
+            const usersFromDb = await User.find()
+            const users = _.map(usersFromDb, user => _.omit(user, ['password']));
+
+            return res.json({ users });
+        } catch (error) {
+            return res.serverError(error);
+        }
+    }
+      
 }
