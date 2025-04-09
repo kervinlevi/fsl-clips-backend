@@ -3,7 +3,7 @@
 const bcrypt = require('bcryptjs');
 
 module.exports = {
-
+  primaryKey: 'user_id',
   attributes: {
 
     user_id: {
@@ -16,6 +16,7 @@ module.exports = {
       type: 'string',
       required: true,
       unique: true,
+      minLength: 6,
       maxLength: 20
     },
 
@@ -23,7 +24,8 @@ module.exports = {
       type: 'string',
       required: true,
       unique: true,
-      maxLength: 50
+      maxLength: 50,
+      isEmail: true
     },
 
     password: {
@@ -39,10 +41,12 @@ module.exports = {
     },
 
     date_added: {
-      type: 'ref',
-      columnType: 'datetime',
-      required: true
-    }
+      type: 'string',
+    },
+
+    id: false,
+    updatedAt: false,
+    createdAt: false,
   },
   
   // Override the toJSON method to exclude the password field
@@ -55,11 +59,11 @@ module.exports = {
   // Lifecycle callback to hash password before creating a user
   beforeCreate: async function(values, proceed) {
     if (values.password) {
-      // Hash the password
+      // Encrypt the password
       try {
-        const hashedPassword = await bcrypt.hash(values.password, 10);
-        values.password = hashedPassword;
-        values.date_added = Date();
+        const encryptedPassword = await bcrypt.hash(values.password, 10);
+        values.password = encryptedPassword;
+        values.date_added = (new Date()).toISOString();
         return proceed();
       } catch (err) {
         return proceed(err);
@@ -68,7 +72,6 @@ module.exports = {
     return proceed();
   },
   
-
   // Lifecycle callback to hash password before updating a user
   beforeUpdate: async function(values, proceed) {
     if (values.password) {

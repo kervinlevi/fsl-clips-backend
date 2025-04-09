@@ -10,5 +10,8 @@
 
 module.exports.routes = {
 
+    // Users
+    'POST /user/create': 'UserController.create',
+    'POST /user/login': 'UserController.login',
 
 };
