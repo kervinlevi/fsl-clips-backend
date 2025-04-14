@@ -15,4 +15,7 @@ module.exports.routes = {
     'POST /user/login': 'UserController.login',
     'GET /users': 'UserController.findAll',
 
+
+    'POST /clip': 'ClipController.upload',
+
 };
