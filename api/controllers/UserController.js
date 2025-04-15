@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const _ = require('lodash');
 
 module.exports = {
     // Registration endpoint
@@ -97,6 +98,82 @@ module.exports = {
         } catch (error) {
             return res.serverError(error);
         }
-    }
-      
+    },
+
+    // Retrieve a user's detail
+    find: async function (req, res) {
+        try {
+            await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
+                return res.badRequest({ error: 'Unauthorized. Not an admin or user not found.' });
+            });
+
+            const user_id = _.toNumber(req.param('user_id'));
+            if (_.isNaN(user_id)) {
+                return res.badRequest({ error: `Invalid user_id param ${JSON.stringify(req.param('user_id'))}.` });
+            }
+
+            const userFromDb = await User.findOne({ user_id });
+            if (!userFromDb) {
+                return res.badRequest({ error: `User with id ${user_id} does not exist.` });
+            }
+            const user = _.omit(userFromDb, ['password']);
+
+            return res.json({ user });
+        } catch (error) {
+            return res.serverError(error);
+        }
+    },
+
+    // Update a user's email, username, and type
+    update: async function (req, res) {
+        try {
+            await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
+                return res.badRequest({ error: 'Unauthorized. Not an admin or user not found.' });
+            });
+
+            const user_id = _.toNumber(req.param('user_id'));
+            if (_.isNaN(user_id)) {
+                return res.badRequest({ error: `Invalid user_id param ${JSON.stringify(req.param('user_id'))}.` });
+            }
+
+            const { username, email, type } = req.allParams();
+            const updatedUser = await User.updateOne({ user_id }).set({
+                username,
+                email,
+                type
+            }).catch((err) => {
+                return res.badRequest({ error: `Failed to update user with id ${user_id}.` });
+            });
+
+            if (!updatedUser) {
+                return res.badRequest({ error: `User with id ${user_id} does not exist.` });
+            }
+            const user = _.omit(updatedUser, ['password']);
+            return res.json({ user });
+        } catch (error) {
+            return res.serverError(error);
+        }
+    },
+
+    // Delete a user
+    delete: async function (req, res) {
+        try {
+            await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
+                return res.badRequest({ error: 'Unauthorized. Not an admin or user not found.' });
+            });
+
+            const user_id = _.toNumber(req.param('user_id'));
+            if (_.isNaN(user_id)) {
+                return res.badRequest({ error: `Invalid user_id param ${JSON.stringify(req.param('user_id'))}.` });
+            }
+
+            const deletedUser = await User.destroyOne({ user_id });
+            if (!deletedUser) {
+                return res.badRequest({ error: `User with id ${user_id} does not exist.` });
+            }
+            return res.json({ message: 'User deleted successfully' });
+        } catch (error) {
+            return res.serverError(error);
+        }
+    },
 }
