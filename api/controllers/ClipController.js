@@ -4,6 +4,17 @@ const ffmpeg = require('fluent-ffmpeg');
 const sails = require('sails');
 
 module.exports = {
+  findAll: async function (req, res) {
+    try {
+        await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
+            return res.badRequest({ error: 'Unauthorized. Not an admin or user not found.' });
+        });
+    const clips = await Clip.find()
+    return res.json({ clips });
+    } catch (err) {
+        return res.serverError(err);
+    }
+  },
   upload: async function (req, res) {
     try {
         const adminUser = await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
@@ -24,12 +35,25 @@ module.exports = {
             });
         });
 
+
         if (uploadedFiles.length === 0) {
             return res.badRequest({ error: 'No file uploaded' });
         }
 
-        const fullFilePath = uploadedFiles[0].fd;
+        const uploadedFile = uploadedFiles[0];
+        if (uploadedFile.type !== 'video/mp4') {
+            fs.unlinkSync(uploadedFile.fd);
+            return res.badRequest({ error: 'Invalid file type. Only MP4 files are accepted' });  
+        }
+
+
+        const fullFilePath = uploadedFile.fd;
         const fileName = path.basename(fullFilePath);
+        if (path.extname(fileName).toLowerCase() !== '.mp4') {
+            fs.unlinkSync(uploadedFile.fd);
+            return res.badRequest({ error: 'Invalid file extension. Only .mp4 files are accepted' });  
+        }
+
         const filePath = `uploads/${fileName}`;
         const thumbName = `${path.parse(fileName).name}-thumb.jpg`;
         const thumbnailPath = `uploads/thumbnails/${thumbName}`;
@@ -48,10 +72,9 @@ module.exports = {
                 timestamps: ['00:00:01'],
                 filename: thumbName,
                 folder: thumbDir,
-                size: '320x240'
             });
         });
-        
+
         const newVideo = await Clip.create({
             description_ph: req.param('description_ph') || "",
             description_en: req.param('description_en') || "",

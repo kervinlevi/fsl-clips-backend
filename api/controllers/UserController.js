@@ -87,20 +87,9 @@ module.exports = {
     // Get all users
     findAll: async function (req, res) {
         try {
-            const token = req.headers['authorization']?.split(' ')[1];
-            if (!token) {
-                return res.badRequest({ error: 'Token not found' });
-                // return res.status(401).json({ error: 'Unauthorized' });
-            }
-
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const user = await User.findOne({ user_id: decoded.id });
-            if (!user) {
-                return res.badRequest({ error: 'User not found' });
-            }
-            if (user.type != 'admin') {
-                return res.badRequest({ error: 'User is not an admin' });
-            }
+            await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
+                return res.badRequest({ error: 'Unauthorized. Not an admin or user not found.' });
+            });
             const usersFromDb = await User.find()
             const users = _.map(usersFromDb, user => _.omit(user, ['password']));
 
