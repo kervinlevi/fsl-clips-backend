@@ -37,7 +37,7 @@ module.exports.http = {
       const assetsPath = path.resolve(__dirname, '../assets');
       return express.static(assetsPath, {
         setHeaders: (res, filePath) => {
-          console.log('Serving file:', filePath);
+          // console.log('Serving file:', filePath);
           res.setHeader('Access-Control-Allow-Origin', '*');
           res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
         },

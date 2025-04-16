@@ -19,7 +19,10 @@ module.exports.routes = {
     'DELETE /user/:user_id': 'UserController.delete',
 
     // Clips
-    'GET /clips': 'ClipController.findAll',
     'POST /clip': 'ClipController.upload',
+    'GET /clips': 'ClipController.findAll',
+    'GET /clip/:clip_id': 'ClipController.find',
+    'POST /clip/:clip_id': 'ClipController.update',
+    'DELETE /clip/:clip_id': 'ClipController.delete',
 
 };

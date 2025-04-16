@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const sails = require('sails');
+const _ = require('lodash');
 
 module.exports = {
   findAll: async function (req, res) {
@@ -87,5 +88,91 @@ module.exports = {
     } catch (err) {
       return res.serverError(err);
     }
-  }
+  },
+
+  // Retrieve a clip's detail
+  find: async function (req, res) {
+    try {
+        await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
+            return res.badRequest({ error: 'Unauthorized. Not an admin or user not found.' });
+        });
+
+        const clip_id = _.toNumber(req.param('clip_id'));
+        if (_.isNaN(clip_id)) {
+            return res.badRequest({ error: `Invalid clip_id param ${JSON.stringify(req.param('clip_id'))}.` });
+        }
+
+        const clip = await Clip.findOne({ clip_id });
+        if (!clip) {
+            return res.badRequest({ error: `Clip with id ${clip_id} does not exist.` });
+        }
+
+        return res.json({ clip });
+    } catch (error) {
+        return res.serverError(error);
+    }
+  },
+
+  // Update a clip's description_ph, and description_en
+  update: async function (req, res) {
+    try {
+        await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
+            return res.badRequest({ error: 'Unauthorized. Not an admin or user not found.' });
+        });
+
+        const clip_id = _.toNumber(req.param('clip_id'));
+        if (_.isNaN(clip_id)) {
+            return res.badRequest({ error: `Invalid clip_id param ${JSON.stringify(req.param('clip_id'))}.` });
+        }
+
+        let { description_ph, description_en } = req.allParams();
+        description_ph = description_ph || ""
+        description_en = description_en || ""
+        const clip = await Clip.updateOne({ clip_id }).set({
+            description_ph,
+            description_en
+        }).catch((err) => {
+            return res.badRequest({ error: `Failed to update clip with id ${clip_id}.` });
+        });
+
+        if (!clip) {
+            return res.badRequest({ error: `Clip with id ${clip_id} does not exist.` });
+        }
+        return res.json({ clip });
+    } catch (error) {
+        return res.serverError(error);
+    }
+  },
+
+  // Delete a clip
+  delete: async function (req, res) {
+    try {
+        await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
+            return res.badRequest({ error: 'Unauthorized. Not an admin or user not found.' });
+        });
+
+        const clip_id = _.toNumber(req.param('clip_id'));
+        if (_.isNaN(clip_id)) {
+            return res.badRequest({ error: `Invalid clip_id param ${JSON.stringify(req.param('clip_id'))}.` });
+        }
+
+        const deletedClip = await Clip.destroyOne({ clip_id });
+        if (!deletedClip) {
+            return res.badRequest({ error: `Clip with id ${clip_id} does not exist.` });
+        }
+
+        try {
+            const videoPath = path.resolve(sails.config.appPath, 'assets', deletedClip.video_url);
+            const thumbnailPath = path.resolve(sails.config.appPath, 'assets', deletedClip.thumbnail_url);
+            await fs.promises.unlink(videoPath);
+            await fs.promises.unlink(thumbnailPath);
+        } catch (err) {
+            sails.log.warn(`Could not delete file ${videoPath}:`, err.message);
+        }
+
+        return res.json({ message: 'Clip deleted successfully' });
+    } catch (error) {
+        return res.serverError(error);
+    }
+  },
 };
