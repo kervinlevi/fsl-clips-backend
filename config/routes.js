@@ -25,4 +25,7 @@ module.exports.routes = {
     'POST /clip/:clip_id': 'ClipController.update',
     'DELETE /clip/:clip_id': 'ClipController.delete',
 
+    // Settings
+    'GET /settings': 'SettingsController.fetch',
+    'POST /settings': 'SettingsController.update'
 };
