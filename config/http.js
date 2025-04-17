@@ -1,5 +1,5 @@
-const path = require('path');
-const express = require('express');
+const path = require("path");
+const express = require("express");
 /**
  * HTTP Server Settings
  * (sails.config.http)
@@ -12,36 +12,35 @@ const express = require('express');
  */
 
 module.exports.http = {
-
   middleware: {
     order: [
-      'cookieParser',
-      'session',
-      'bodyParser',
-      'compress',
-      'poweredBy',
-      'uploads',
-      'router',
-      'www',
-      'favicon',
+      "cookieParser",
+      "session",
+      "bodyParser",
+      "compress",
+      "poweredBy",
+      "uploads",
+      "router",
+      "www",
+      "favicon",
     ],
 
     // Existing bodyParser stays untouched
     bodyParser: (function _configureBodyParser() {
-      const skipper = require('skipper');
+      const skipper = require("skipper");
       return skipper({ strict: true });
     })(),
-      
+
     // Assets middleware to serve uploaded files
     uploads: (function () {
-      const assetsPath = path.resolve(__dirname, '../assets');
+      const assetsPath = path.resolve(__dirname, "../assets");
       return express.static(assetsPath, {
         setHeaders: (res, filePath) => {
           // console.log('Serving file:', filePath);
-          res.setHeader('Access-Control-Allow-Origin', '*');
-          res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
         },
-        index: false
+        index: false,
       });
     })(),
   },
