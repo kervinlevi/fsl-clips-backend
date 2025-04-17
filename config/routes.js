@@ -22,6 +22,7 @@ module.exports.routes = {
     'POST /clip': 'ClipController.upload',
     'GET /clips': 'ClipController.findAll',
     'GET /clip/:clip_id': 'ClipController.find',
+    'GET /randomClips': 'ClipController.fetchRandomClips',
     'POST /clip/:clip_id': 'ClipController.update',
     'DELETE /clip/:clip_id': 'ClipController.delete',
 

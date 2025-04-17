@@ -228,4 +228,32 @@ module.exports = {
       return res.serverError(error);
     }
   },
+
+  // Fetch 5 random clips excluding clips with id in filter
+  fetchRandomClips: async function (req, res) {
+    try {
+      let exclude = req.query.exclude;
+      const limit = 5;
+
+      // Sanitize exclude array
+      if (_.isString(exclude)) {
+        try {
+          exclude = JSON.parse(exclude);
+        } catch (err) {
+          exclude = [];
+        }
+      }
+      exclude = _.isArray(exclude) ? exclude.map(Number).filter(item => !isNaN(item)) : [];
+
+      // Create select statement and query random clips with exclusions
+      const whereClause = exclude.length > 0 ? `WHERE clip_id NOT IN (${exclude.join(',')})` : '';
+      const query = `SELECT * FROM clip ${whereClause} ORDER BY RAND() LIMIT ${limit}`;
+      const selected = await sails.sendNativeQuery(query);
+      const clips = selected.rows;
+      
+      return res.json({ clips })
+    } catch (error) {
+      return res.serverError({error})
+    }
+  }
 };
