@@ -114,9 +114,9 @@ module.exports = {
   // Get all users
   findAll: async function (req, res) {
     try {
-      const {authError} = await checkAdmin.with({ req });
+      const { authError } = await checkAdmin.with({ req });
       if (authError) {
-        return res.badRequest({error: authError});
+        return res.badRequest({ error: authError });
       }
 
       const usersFromDb = await User.find();
@@ -124,16 +124,16 @@ module.exports = {
 
       return res.json({ users });
     } catch (error) {
-      return res.serverError({error: "Unable to fetch all users"});
+      return res.serverError({ error: "Unable to fetch all users" });
     }
   },
 
   // Retrieve a user's detail
   find: async function (req, res) {
     try {
-      const {authError} = await checkAdmin.with({ req });
+      const { authError } = await checkAdmin.with({ req });
       if (authError) {
-        return res.badRequest({error: authError});
+        return res.badRequest({ error: authError });
       }
 
       const user_id = _.toNumber(req.param("user_id"));
@@ -162,9 +162,9 @@ module.exports = {
   // Update a user's email, username, and type
   update: async function (req, res) {
     try {
-      const {authError} = await checkAdmin.with({ req });
+      const { authError } = await checkAdmin.with({ req });
       if (authError) {
-        return res.badRequest({error: authError});
+        return res.badRequest({ error: authError });
       }
 
       const user_id = _.toNumber(req.param("user_id"));
@@ -204,9 +204,9 @@ module.exports = {
   // Delete a user
   delete: async function (req, res) {
     try {
-      const {authError} = await checkAdmin.with({ req });
+      const { authError } = await checkAdmin.with({ req });
       if (authError) {
-        return res.badRequest({error: authError});
+        return res.badRequest({ error: authError });
       }
 
       const user_id = _.toNumber(req.param("user_id"));
@@ -227,6 +227,39 @@ module.exports = {
       return res.json({ message: "User deleted successfully" });
     } catch (error) {
       return res.serverError(error);
+    }
+  },
+
+  // Refresh user's JWT token
+  refreshToken: async function (req, res) {
+    const { refreshToken } = req.body;
+    try {
+      const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+      const user = await User.findOne({ user_id: decoded.id });
+
+      if (!user) return res.unauthorized({ error: "Invalid refresh token" });
+
+      // Generate access token and refresh token
+      const newAccessToken = jwt.sign(
+        { id: user.user_id },
+        process.env.JWT_SECRET,
+        { expiresIn: "30m" }
+      );
+      const newRefreshToken = jwt.sign(
+        { id: user.user_id },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      return res.json({
+        user_id: user.user_id,
+        email: user.email,
+        type: user.type,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      });
+    } catch (err) {
+      return res.unauthorized({ error: "Invalid refresh token" });
     }
   },
 };

@@ -1,8 +1,12 @@
 module.exports = async function (req, res, proceed) {
-  const logError = (originalFn, type) => {
-    return function (...args) {
-      sails.log.error(`[${type}] ${req.method} ${req.url}`, args[0]);
-      return originalFn.apply(this, args);
+  const logError = (originalFn, label) => {
+    return function (data) {
+      sails.log.error(`[${label}] ${req.method} ${req.url}`, data);
+
+      if (typeof originalFn !== 'function') {
+        return;
+      }
+      return originalFn.call(this, data);
     };
   };
 
