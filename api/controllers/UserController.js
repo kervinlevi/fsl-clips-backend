@@ -204,7 +204,7 @@ module.exports = {
   // Delete a user
   delete: async function (req, res) {
     try {
-      const { authError } = await checkAdmin.with({ req });
+      const { admin, authError } = await checkAdmin.with({ req });
       if (authError) {
         return res.badRequest({ error: authError });
       }
@@ -216,6 +216,10 @@ module.exports = {
             req.param("user_id")
           )}.`,
         });
+      }
+
+      if (admin.user_id === user_id) {
+        return res.badRequest({error: "Operation not allowed."});
       }
 
       const deletedUser = await User.destroyOne({ user_id });
