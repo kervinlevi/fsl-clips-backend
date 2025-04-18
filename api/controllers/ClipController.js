@@ -3,15 +3,15 @@ const fs = require("fs");
 const ffmpeg = require("fluent-ffmpeg");
 const sails = require("sails");
 const _ = require("lodash");
+const checkAdmin = sails.helpers.auth.checkAdmin;
 
 module.exports = {
   findAll: async function (req, res) {
     try {
-      await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
-        return res.badRequest({
-          error: "Unauthorized. Not an admin or user not found.",
-        });
-      });
+      const { authError } = await checkAdmin.with({ req });
+      if (authError) {
+        return res.badRequest({ error: authError });
+      }
       const clips = await Clip.find();
       return res.json({ clips });
     } catch (err) {
@@ -21,13 +21,12 @@ module.exports = {
 
   upload: async function (req, res) {
     try {
-      const adminUser = await sails.helpers.auth.checkAdmin
-        .with({ req })
-        .intercept((err) => {
-          return res.badRequest({
-            error: "Unauthorized. Not an admin or user not found.",
-          });
-        });
+      const { admin, authError } = await checkAdmin.with({
+        req,
+      });
+      if (authError) {
+        return res.badRequest({ error: authError });
+      }
 
       // Ensure video directory exists
       const uploadDir = path.resolve(sails.config.appPath, "assets/uploads");
@@ -98,7 +97,7 @@ module.exports = {
         description_en: req.param("description_en") || "",
         video_url: filePath,
         thumbnail_url: thumbnailPath,
-        added_by: adminUser.user_id,
+        added_by: admin.user_id,
       }).fetch();
 
       return res.json(newVideo);
@@ -110,11 +109,10 @@ module.exports = {
   // Retrieve a clip's detail
   find: async function (req, res) {
     try {
-      await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
-        return res.badRequest({
-          error: "Unauthorized. Not an admin or user not found.",
-        });
-      });
+      const { authError } = await checkAdmin.with({ req });
+      if (authError) {
+        return res.badRequest({ error: authError });
+      }
 
       const clip_id = _.toNumber(req.param("clip_id"));
       if (_.isNaN(clip_id)) {
@@ -141,11 +139,10 @@ module.exports = {
   // Update a clip's description_ph, and description_en
   update: async function (req, res) {
     try {
-      await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
-        return res.badRequest({
-          error: "Unauthorized. Not an admin or user not found.",
-        });
-      });
+      const { authError } = await checkAdmin.with({ req });
+      if (authError) {
+        return res.badRequest({ error: authError });
+      }
 
       const clip_id = _.toNumber(req.param("clip_id"));
       if (_.isNaN(clip_id)) {
@@ -184,11 +181,10 @@ module.exports = {
   // Delete a clip
   delete: async function (req, res) {
     try {
-      await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
-        return res.badRequest({
-          error: "Unauthorized. Not an admin or user not found.",
-        });
-      });
+      const { authError } = await checkAdmin.with({ req });
+      if (authError) {
+        return res.badRequest({ error: authError });
+      }
 
       const clip_id = _.toNumber(req.param("clip_id"));
       if (_.isNaN(clip_id)) {
@@ -243,17 +239,20 @@ module.exports = {
           exclude = [];
         }
       }
-      exclude = _.isArray(exclude) ? exclude.map(Number).filter(item => !isNaN(item)) : [];
+      exclude = _.isArray(exclude)
+        ? exclude.map(Number).filter((item) => !isNaN(item))
+        : [];
 
       // Create select statement and query random clips with exclusions
-      const whereClause = exclude.length > 0 ? `WHERE clip_id NOT IN (${exclude.join(',')})` : '';
+      const whereClause =
+        exclude.length > 0 ? `WHERE clip_id NOT IN (${exclude.join(",")})` : "";
       const query = `SELECT * FROM clip ${whereClause} ORDER BY RAND() LIMIT ${limit}`;
       const selected = await sails.sendNativeQuery(query);
       const clips = selected.rows;
-      
-      return res.json({ clips })
+
+      return res.json({ clips });
     } catch (error) {
-      return res.serverError({error})
+      return res.serverError({ error });
     }
-  }
+  },
 };

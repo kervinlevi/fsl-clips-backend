@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const _ = require("lodash");
+const checkAdmin = sails.helpers.auth.checkAdmin;
 
 module.exports = {
   // Registration endpoint
@@ -113,28 +114,27 @@ module.exports = {
   // Get all users
   findAll: async function (req, res) {
     try {
-      await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
-        return res.badRequest({
-          error: "Unauthorized. Not an admin or user not found.",
-        });
-      });
+      const {authError} = await checkAdmin.with({ req });
+      if (authError) {
+        return res.badRequest({error: authError});
+      }
+
       const usersFromDb = await User.find();
       const users = _.map(usersFromDb, (user) => _.omit(user, ["password"]));
 
       return res.json({ users });
     } catch (error) {
-      return res.serverError(error);
+      return res.serverError({error: "Unable to fetch all users"});
     }
   },
 
   // Retrieve a user's detail
   find: async function (req, res) {
     try {
-      await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
-        return res.badRequest({
-          error: "Unauthorized. Not an admin or user not found.",
-        });
-      });
+      const {authError} = await checkAdmin.with({ req });
+      if (authError) {
+        return res.badRequest({error: authError});
+      }
 
       const user_id = _.toNumber(req.param("user_id"));
       if (_.isNaN(user_id)) {
@@ -162,11 +162,10 @@ module.exports = {
   // Update a user's email, username, and type
   update: async function (req, res) {
     try {
-      await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
-        return res.badRequest({
-          error: "Unauthorized. Not an admin or user not found.",
-        });
-      });
+      const {authError} = await checkAdmin.with({ req });
+      if (authError) {
+        return res.badRequest({error: authError});
+      }
 
       const user_id = _.toNumber(req.param("user_id"));
       if (_.isNaN(user_id)) {
@@ -205,11 +204,10 @@ module.exports = {
   // Delete a user
   delete: async function (req, res) {
     try {
-      await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
-        return res.badRequest({
-          error: "Unauthorized. Not an admin or user not found.",
-        });
-      });
+      const {authError} = await checkAdmin.with({ req });
+      if (authError) {
+        return res.badRequest({error: authError});
+      }
 
       const user_id = _.toNumber(req.param("user_id"));
       if (_.isNaN(user_id)) {

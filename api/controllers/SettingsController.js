@@ -4,6 +4,7 @@ const _ = require("lodash");
 const defaultSettings = require("../../utils/defaultSettings");
 const settingsPath = path.resolve(__dirname, "../../data/settings.json");
 const settingsDirPath = path.dirname(settingsPath);
+const checkAdmin = sails.helpers.auth.checkAdmin;
 
 async function loadSettings() {
   try {
@@ -39,14 +40,14 @@ module.exports = {
 
   update: async function (req, res) {
     try {
-      await sails.helpers.auth.checkAdmin.with({ req }).intercept((err) => {
-        return res.badRequest({
-          error: "Unauthorized. Not an admin or user not found.",
-        });
-      });
+      const { authError } = await checkAdmin.with({ req });
+      if (authError) {
+        return res.badRequest({ error: authError });
+      }
 
       // Values become string in req.body
-      const quiz_enabled = req.body.quiz_enabled === 'true' || req.body.quiz_enabled === true;
+      const quiz_enabled =
+        req.body.quiz_enabled === "true" || req.body.quiz_enabled === true;
       const clips_before_quiz = _.toNumber(req.body.clips_before_quiz);
 
       // Validate the values
@@ -61,7 +62,11 @@ module.exports = {
       }
 
       const newSettings = { quiz_enabled, clips_before_quiz };
-      await fs.promises.writeFile(settingsPath, JSON.stringify(newSettings, null, 2), 'utf8');
+      await fs.promises.writeFile(
+        settingsPath,
+        JSON.stringify(newSettings, null, 2),
+        "utf8"
+      );
 
       return res.json(newSettings);
     } catch (err) {

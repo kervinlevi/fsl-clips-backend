@@ -1,9 +1,9 @@
 const jwt = require("jsonwebtoken");
 
 module.exports = {
-  friendlyName: "Check Admin",
+  friendlyName: "Check User",
 
-  description: "Check if the user is an admin using JWT. Returns {admin, authError}",
+  description: "Check if the JWT token is valid. Returns {user, authError}",
 
   inputs: {
     req: {
@@ -19,22 +19,22 @@ module.exports = {
     try {
       const token = req.headers["authorization"]?.split(" ")[1];
       if (!token) {
-        return exits.success({ admin: null, authError: "Token not found" });
+        return exits.success({ user: null, authError: "Token not found" });
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findOne({ user_id: decoded.id });
 
       if (!user) {
-        return exits.success({ admin: null, authError: "User not found" });
-      }
-      if (user.type !== "admin") {
-        return exits.success({ admin: null, authError: "User is not an admin" });
+        return exits.success({ user: null, authError: "User not found" });
       }
 
-      return exits.success({ admin: user, authError: null });
+      return exits.success({ user: user, authError: null });
     } catch (err) {
-      return exits.success({ admin: null, authError: err.message || JSON.stringify(err) });
+      return exits.success({
+        user: null,
+        authError: err.message || JSON.stringify(err),
+      });
     }
   },
 };
