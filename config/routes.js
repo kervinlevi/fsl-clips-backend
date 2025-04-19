@@ -18,6 +18,9 @@ module.exports.routes = {
     'POST /user/:user_id': 'UserController.update',
     'DELETE /user/:user_id': 'UserController.delete',
     'POST /token/refresh': 'UserController.refreshToken',
+    'GET /self': 'UserController.findSelf',
+    'POST /self/update': 'UserController.updateSelf',
+    'DELETE /self/delete': 'UserController.deleteSelf',
 
     // Clips
     'POST /clip': 'ClipController.upload',

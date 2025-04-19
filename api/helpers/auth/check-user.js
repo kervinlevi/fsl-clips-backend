@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 module.exports = {
   friendlyName: "Check User",
 
-  description: "Check if the JWT token is valid. Returns {user, authError}",
+  description: "Check if the JWT token is valid. Returns {user, error}",
 
   inputs: {
     req: {
@@ -23,7 +23,8 @@ module.exports = {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findOne({ user_id: decoded.id });
+      const userFromDb = await User.findOne({ user_id: decoded.id });
+      const user = _.omit(userFromDb, ["password"]);
 
       if (!user) {
         return exits.success({ user: null, authError: "User not found" });
@@ -31,10 +32,7 @@ module.exports = {
 
       return exits.success({ user: user, authError: null });
     } catch (err) {
-      return exits.success({
-        user: null,
-        authError: err.message || JSON.stringify(err),
-      });
+      return exits.success({ user: null, authError: err.message || JSON.stringify(err) });
     }
   },
 };

@@ -2,6 +2,11 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const _ = require("lodash");
 const checkAdmin = sails.helpers.auth.checkAdmin;
+const checkUser = sails.helpers.auth.checkUser;
+
+const usernameRegex = /^[a-zA-Z0-9_]{6,20}$/;
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex = /^(?=.*[0-9])(?=.*[a-zA-Z]).{8,}$/;
 
 module.exports = {
   // Registration endpoint
@@ -20,10 +25,21 @@ module.exports = {
         });
       }
 
-      const usernameRegex = /^[a-zA-Z0-9_]{6,20}$/;
       if (!usernameRegex.test(username)) {
         return res.badRequest({
           error: "Username can contain alphabet, numeric, and _ only.",
+        });
+      }
+
+      if (email.length > 50) {
+        return res.badRequest({
+          error: "Email address must be up to 50 characters only.",
+        });
+      }
+
+      if (!emailRegex.test(email)) {
+        return res.badRequest({
+          error: "Invalid email address.",
         });
       }
 
@@ -42,11 +58,10 @@ module.exports = {
         });
       }
 
-      const passwordRegex = /^(?=.*[0-9])(?=.*[a-zA-Z]).{8,}$/;
       if (!passwordRegex.test(password)) {
         return res.badRequest({
           error:
-            "Password must contain at least one number and one alphabetic character.",
+            "Password must contain at least one number and one alphabet character.",
         });
       }
       const newUser = await User.create({ username, password, email }).fetch();
@@ -176,7 +191,50 @@ module.exports = {
         });
       }
 
-      const { username, email, type } = req.allParams();
+      let { username, email, type } = req.allParams();
+      username = username.trim();
+
+      if (!username) {
+        return res.badRequest({ error: "Username is required." });
+      }
+
+      if (username.length < 6 || username.length > 20) {
+        return res.badRequest({
+          error: "Username must be 6 to 20 characters.",
+        });
+      }
+
+      if (!usernameRegex.test(username)) {
+        return res.badRequest({
+          error: "Username can contain alphabet, numeric, and _ only.",
+        });
+      }
+
+      if (email.length > 50) {
+        return res.badRequest({
+          error: "Email address must be up to 50 characters only.",
+        });
+      }
+
+      if (!emailRegex.test(email)) {
+        return res.badRequest({
+          error: "Invalid email address.",
+        });
+      }
+
+      const existingUsername = await User.findOne({
+        where: { username: username, user_id: { "!=": user_id } },
+      });
+      if (existingUsername) {
+        return res.badRequest({ error: "Username is already taken." });
+      }
+      const existingEmail = await User.findOne({
+        where: { email: email, user_id: { "!=": user_id } },
+      });
+      if (existingEmail) {
+        return res.badRequest({ error: "Email address is already taken." });
+      }
+
       const updatedUser = await User.updateOne({ user_id })
         .set({
           username,
@@ -219,7 +277,7 @@ module.exports = {
       }
 
       if (admin.user_id === user_id) {
-        return res.badRequest({error: "Operation not allowed."});
+        return res.badRequest({ error: "Operation not allowed." });
       }
 
       const deletedUser = await User.destroyOne({ user_id });
@@ -264,6 +322,130 @@ module.exports = {
       });
     } catch (err) {
       return res.unauthorized({ error: "Invalid refresh token" });
+    }
+  },
+
+  // Retrieve self account's detail
+  findSelf: async function (req, res) {
+    try {
+      const { user, authError } = await checkUser.with({ req });
+      if (authError) {
+        return res.badRequest({ error: authError });
+      }
+      return res.json({ user });
+    } catch (error) {
+      return res.serverError(error);
+    }
+  },
+
+  // Retrieve self account's detail
+  updateSelf: async function (req, res) {
+    try {
+      const { user, authError } = await checkUser.with({ req });
+      if (authError) {
+        return res.badRequest({ error: authError });
+      }
+
+      let { username, email, password } = req.allParams();
+      username = username.trim();
+
+      if (!username) {
+        return res.badRequest({ error: "Username is required." });
+      }
+
+      if (username.length < 6 || username.length > 20) {
+        return res.badRequest({
+          error: "Username must be 6 to 20 characters.",
+        });
+      }
+
+      if (!usernameRegex.test(username)) {
+        return res.badRequest({
+          error: "Username can contain alphabet, numeric, and _ only.",
+        });
+      }
+
+      if (email.length > 50) {
+        return res.badRequest({
+          error: "Email address must be up to 50 characters only.",
+        });
+      }
+
+      if (!emailRegex.test(email)) {
+        return res.badRequest({
+          error: "Invalid email address.",
+        });
+      }
+
+      const existingUsername = await User.findOne({
+        where: { username: username, user_id: { "!=": user.user_id } },
+      });
+      if (existingUsername) {
+        return res.badRequest({ error: "Username is already taken." });
+      }
+      const existingEmail = await User.findOne({
+        where: { email: email, user_id: { "!=": user.user_id } },
+      });
+      if (existingEmail) {
+        return res.badRequest({ error: "Email address is already taken." });
+      }
+
+      const updateData = { username, email };
+
+      // Updating password is optional
+      if (password) {
+        if (password.length < 8) {
+          return res.badRequest({
+            error: "Password must be at least 8 characters long.",
+          });
+        }
+
+        if (!passwordRegex.test(password)) {
+          return res.badRequest({
+            error:
+              "Password must contain at least one number and one alphabet character.",
+          });
+        }
+
+        updateData.password = password;
+      }
+
+      const updatedUser = await User.updateOne({ user_id: user.user_id })
+        .set(updateData)
+        .catch((err) => {
+          return res.badRequest({
+            error: `Failed to update user with id ${user.user_id}.`,
+          });
+        });
+
+      if (!updatedUser) {
+        return res.badRequest({
+          error: `User with id ${user.user_id} does not exist.`,
+        });
+      }
+      const returnUser = _.omit(updatedUser, ["password"]);
+      return res.json({ user: returnUser });
+    } catch (error) {
+      return res.serverError(error);
+    }
+  },
+
+  // Delete own account
+  deleteSelf: async function (req, res) {
+    try {
+      const { user, authError } = await checkUser.with({ req });
+      if (authError) {
+        return res.badRequest({ error: authError });
+      }
+      const deletedUser = await User.destroyOne({ user_id: user.user_id });
+      if (!deletedUser) {
+        return res.badRequest({
+          error: `User with id ${user.user_id} does not exist.`,
+        });
+      }
+      return res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      return res.serverError(error);
     }
   },
 };
