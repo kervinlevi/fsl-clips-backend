@@ -3,6 +3,7 @@ const fs = require("fs");
 const ffmpeg = require("fluent-ffmpeg");
 const sails = require("sails");
 const _ = require("lodash");
+const SettingsService = require("../services/SettingsService");
 const checkAdmin = sails.helpers.auth.checkAdmin;
 
 module.exports = {
@@ -249,8 +250,8 @@ module.exports = {
       const query = `SELECT * FROM clip ${whereClause} ORDER BY RAND() LIMIT ${limit}`;
       const selected = await sails.sendNativeQuery(query);
       const clips = selected.rows;
-
-      return res.json({ clips });
+      const settings = await SettingsService.fetchSettings();
+      return res.json({ clips, settings });
     } catch (error) {
       return res.serverError({ error });
     }
