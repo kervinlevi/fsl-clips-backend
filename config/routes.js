@@ -32,5 +32,8 @@ module.exports.routes = {
 
     // Settings
     'GET /settings': 'SettingsController.fetch',
-    'POST /settings': 'SettingsController.update'
+    'POST /settings': 'SettingsController.update',
+
+    // Quiz attempts
+    'POST /quizAttempt': 'QuizAttemptController.insert',
 };

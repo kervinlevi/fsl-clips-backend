@@ -226,11 +226,12 @@ module.exports = {
     }
   },
 
-  // Fetch 5 random clips excluding clips with id in filter
+  // Fetch random clips excluding clips with id in filter
   fetchRandomClips: async function (req, res) {
     try {
       let exclude = req.query.exclude;
-      const limit = 5;
+      const settings = await SettingsService.fetchSettings();
+      const limit = settings.clips_before_quiz ?? 5;
 
       // Sanitize exclude array
       if (_.isString(exclude)) {
@@ -250,7 +251,32 @@ module.exports = {
       const query = `SELECT * FROM clip ${whereClause} ORDER BY RAND() LIMIT ${limit}`;
       const selected = await sails.sendNativeQuery(query);
       const clips = selected.rows;
-      const settings = await SettingsService.fetchSettings();
+
+      if (settings.quiz_enabled == true) {
+        // randomize clip to guess
+        const guessIndex = Math.floor(Math.random() * limit);
+
+        // create quiz options
+        const options = [];
+        for (let i = 0; i < 4; i++) {
+          const index = (guessIndex + i) % limit;
+          options.push({
+            description_ph: clips[index].description_ph ?? "",
+            correct: index === guessIndex,
+          });
+        }
+
+        const quiz = {
+          ...clips[guessIndex],
+          quiz: true,
+          options: _.shuffle(options),
+        };
+
+        return res.json({
+          clips: [...clips, quiz],
+          settings,
+        });
+      }
       return res.json({ clips, settings });
     } catch (error) {
       return res.serverError({ error });

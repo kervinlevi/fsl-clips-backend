@@ -50,7 +50,7 @@ module.exports = {
 
   },
   
-  // Lifecycle callback to hash password before creating a clip
+  // Lifecycle callback to include date_added
   beforeCreate: async function(values, proceed) {
     values.date_added = (new Date()).toISOString();
     return proceed();
