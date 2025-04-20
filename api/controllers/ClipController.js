@@ -4,7 +4,15 @@ const ffmpeg = require("fluent-ffmpeg");
 const sails = require("sails");
 const _ = require("lodash");
 const SettingsService = require("../services/SettingsService");
+const moment = require("moment-timezone");
 const checkAdmin = sails.helpers.auth.checkAdmin;
+const checkUser = sails.helpers.auth.checkUser;
+
+const isToday = (isoString) => {
+  const attemptDate = moment(isoString).utcOffset(8, true);
+  const now = moment().utcOffset(8, true);
+  return attemptDate.isSame(now, "day");
+};
 
 module.exports = {
   findAll: async function (req, res) {
@@ -230,8 +238,36 @@ module.exports = {
   fetchRandomClips: async function (req, res) {
     try {
       let exclude = req.query.exclude;
+
       const settings = await SettingsService.fetchSettings();
-      const limit = settings.clips_before_quiz ?? 5;
+      let showQuiz = settings.quiz_enabled == true;
+      if (showQuiz) {
+        const authHeader = req.headers["authorization"];
+        if (!authHeader) {
+          showQuiz = false;
+        } else {
+          // Show quiz only when user is logged in
+          const { user, authError } = await checkUser.with({ req });
+          if (authError) {
+            return res.badRequest({ error: authError });
+          }
+
+          // Show quiz only when user has not successfully answered today
+          const quizAttempts = await QuizAttempt.find({
+            where: {
+              user_id: user.user_id,
+              success: true,
+            },
+            sort: "date_attempted DESC",
+            limit: 1,
+          });
+          showQuiz =
+            quizAttempts.length == 0 ||
+            !isToday(quizAttempts[0].date_attempted);
+        }
+      }
+
+      const limit = showQuiz ? settings.clips_before_quiz : 5;
 
       // Sanitize exclude array
       if (_.isString(exclude)) {
@@ -252,7 +288,7 @@ module.exports = {
       const selected = await sails.sendNativeQuery(query);
       const clips = selected.rows;
 
-      if (settings.quiz_enabled == true) {
+      if (showQuiz) {
         // randomize clip to guess
         const guessIndex = Math.floor(Math.random() * limit);
 
@@ -272,12 +308,9 @@ module.exports = {
           options: _.shuffle(options),
         };
 
-        return res.json({
-          clips: [...clips, quiz],
-          settings,
-        });
+        return res.json({ clips: [...clips, quiz] });
       }
-      return res.json({ clips, settings });
+      return res.json({ clips });
     } catch (error) {
       return res.serverError({ error });
     }
