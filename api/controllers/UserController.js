@@ -96,9 +96,13 @@ module.exports = {
       const { email, password } = req.body;
 
       const user = await User.findOne({ email });
+      if (!user) {
+        return res.badRequest({ error: "User not found." });
+      }
+
       const isPasswordValid = await bcrypt.compare(password, user.password);
 
-      if (!user || !isPasswordValid) {
+      if (!isPasswordValid) {
         return res.badRequest({ error: "Incorrect email or password." });
       }
 

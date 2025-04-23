@@ -288,14 +288,14 @@ module.exports = {
       const selected = await sails.sendNativeQuery(query);
       const clips = selected.rows;
 
-      if (showQuiz) {
+      if (showQuiz && clips.length > 0) {
         // randomize clip to guess
         const guessIndex = Math.floor(Math.random() * limit);
 
         // create quiz options
         const options = [];
         for (let i = 0; i < 4; i++) {
-          const index = (guessIndex + i) % limit;
+          const index = (guessIndex + i) % clips.length;
           options.push({
             description_ph: clips[index].description_ph ?? "",
             correct: index === guessIndex,
