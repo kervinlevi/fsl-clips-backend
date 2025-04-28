@@ -3,6 +3,23 @@
 a [Sails v1](https://sailsjs.com) application
 
 
+## Setup
+- Set up the MySQL database. Don't forget to create the `fsl_clips` table
+- Create configuration file `.env` in `fsl-clips-backend/` directory
+```
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=fsl_clips
+TEST_DB_NAME=test_fsl_clips
+
+DB_USER=_your_db_username_
+DB_PASSWORD=_your_db_password_
+JWT_SECRET=_generate_your_key_
+```
+- Run the project via **sails lift**
+
+
+
 ### Links
 
 + [Sails framework documentation](https://sailsjs.com/get-started)
